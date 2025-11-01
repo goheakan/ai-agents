@@ -26,25 +26,25 @@ class ModelFactory:
     
     # Map model types to their implementations
     MODEL_IMPLEMENTATIONS = {
-        #"claude": ClaudeModel,
+        "claude": ClaudeModel,
         #"groq": GroqModel,
         #"openai": OpenAIModel,
         #"gemini": GeminiModel,  # Re-enabled with Gemini 2.5 models
         #"deepseek": DeepSeekModel,
-        #"ollama": OllamaModel,  # Add Ollama implementation
-        "xai": XAIModel,  # xAI Grok models
+        "ollama": OllamaModel,  # Add Ollama implementation
+        #"xai": XAIModel,  # xAI Grok models
         #"openrouter": OpenRouterModel  # 🌙 Moon Dev: OpenRouter - 200+ models!
     }
 
     # Default models for each type
     DEFAULT_MODELS = {
-        #"claude": "claude-3-5-haiku-latest",  # Latest fast Claude model
+        "claude": "claude-4-5-haiku-latest",  # Latest fast Claude model
         #"groq": "mixtral-8x7b-32768",        # Fast Mixtral model
         #"openai": "gpt-4o",                  # Latest GPT-4 Optimized
         #"gemini": "gemini-2.5-flash",        # Fast Gemini 2.5 model
         #"deepseek": "deepseek-reasoner",     # Enhanced reasoning model
-        #"ollama": "llama3.2",                # Meta's Llama 3.2 - balanced performance
-        "xai": "grok-4-fast-reasoning",       # xAI's Grok 4 Fast with reasoning (best value: 2M context, cheap!)
+        "ollama": "0xroyce/plutus:latest",                # Meta's Llama 3.2 - balanced performance
+        #"xai": "grok-4-fast-reasoning",       # xAI's Grok 4 Fast with reasoning (best value: 2M context, cheap!)
         #"openrouter": "google/gemini-2.5-flash"  # 🌙 Moon Dev: OpenRouter default - fast & cheap Gemini!
     }
     
@@ -216,7 +216,7 @@ class ModelFactory:
             #"openai": "OPENAI_KEY",
             #"gemini": "GEMINI_KEY",  # Re-enabled with Gemini 2.5 models
             #"deepseek": "DEEPSEEK_KEY",
-            "xai": "GROK_API_KEY",  # Grok/xAI uses GROK_API_KEY
+            #"xai": "GROK_API_KEY",  # Grok/xAI uses GROK_API_KEY
             #"openrouter": "OPENROUTER_API_KEY",  # 🌙 Moon Dev: OpenRouter - 200+ models!
             # Ollama doesn't need an API key as it runs locally
         }
