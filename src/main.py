@@ -17,10 +17,10 @@ sys.path.append(project_root)
 
 # Import agents
 from src.agents.trading_agent import TradingAgent
-from src.agents.risk_agent import RiskAgent
-from src.agents.strategy_agent import StrategyAgent
-from src.agents.copybot_agent import CopyBotAgent
-from src.agents.sentiment_agent import SentimentAgent
+#from src.agents.risk_agent import RiskAgent
+#from src.agents.strategy_agent import StrategyAgent
+#from src.agents.copybot_agent import CopyBotAgent
+#from src.agents.sentiment_agent import SentimentAgent
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +28,7 @@ load_dotenv()
 # Agent Configuration
 ACTIVE_AGENTS = {
     'risk': False,      # Risk management agent
-    'trading': False,   # LLM trading agent
+    'trading': True,   # LLM trading agent
     'strategy': False,  # Strategy-based trading agent
     'copybot': False,   # CopyBot agent
     'sentiment': False, # Run sentiment_agent.py directly instead

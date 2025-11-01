@@ -91,8 +91,8 @@ USE_SWARM_MODE = True  # True = 6-model swarm consensus (~45-60s per token)
                         # False = Single model fast execution (~10s per token)
 
 # 📈 TRADING MODE SETTINGS
-LONG_ONLY = True  # True = Long positions only (works on all exchanges)
-                  # False = Long & Short positions (works on Aster/HyperLiquid)
+LONG_ONLY = False  # True = Long positions only (Solana on-chain, no shorting available)
+                  # False = Long & Short positions (HyperLiquid perpetuals)
                   #
                   # When LONG_ONLY = True:
                   #   - "Buy" = Opens/maintains long position
@@ -104,6 +104,7 @@ LONG_ONLY = True  # True = Long positions only (works on all exchanges)
                   #   - "Sell" = Closes long OR opens short position
                   #   - Full long/short capability
                   #
+                  # Note: Solana is always LONG_ONLY (exchange limitation)
                   # Note: Solana is always LONG_ONLY (exchange limitation)
 
 # 🤖 SINGLE MODEL SETTINGS (only used when USE_SWARM_MODE = False)
@@ -163,8 +164,36 @@ EXCLUDED_TOKENS = [USDC_ADDRESS, SOL_ADDRESS]
 # Each token takes ~45-60 seconds in swarm mode
 # Comment out tokens you don't want to trade (add # at start of line)
 MONITORED_TOKENS = [
-    '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump',    # 🌬️ FART (DISABLED)
-    #'DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump',   # 🏠 housecoin (ACTIVE)
+    'c81b9a04884f4a8107f734c4d88f811a',    # 💎 WOW
+    'ce98fc675b7de6fa9776d32e00c56717',    # 💎 VORTX
+    '49b67c39f5566535de22b29b0e51e685',    # 💎 USOL
+    '592e638c27be0c84f7c2a4aad919b855',    # 💎 PRFI
+    '5b56ac883c628df1fe24d463b3ac82ac',    # 💎 ANON
+    '92c54320963722f8c76be61a8e655fb9',    # 💎 EX
+    '571aa6d5261fb8f28e21a9cdb2e1c646',    # 💎 UWLD
+    '23fc959643503f65a253fdfb4d34742f',    # 💎 XION
+    '63142af22ec99122436a82c47b8ef2fa',    # 💎 PEG
+    'd50882aa1d890629d02b2a616dde56e5',    # 💎 ANZ
+    'c41d4a266072f72005ba7bc56374fa84',    # 💎 STLOOP
+    'c1fb593aeffbeb02f85e0308e9956a90',    # 🐱 PURR
+    '68c563790c975869358031d0e42e49a1',    # 💎 QUANT
+    '346d925b4592c989ff2433dd13a4ec1a',    # 💎 TILT
+    'fd61ec89811ba3cf2ae12d0ed8ef1afd',    # 💎 XAUT0
+    'b113d34e351cf195733c98442530c099',    # 💎 UBONK
+    '0bff82cce36b779c3f7d3d678e3a740d',    # 💎 PUP
+    'f9969f85c507bf85c1a516f0ecc8478f',    # 💎 VSN
+    '6d7473f5efcb0989ccddd3e123ddb1d7',    # 💎 REX
+    '3d4d3796a3d34c8693d087ad266950e5',    # 💎 THBILL
+    'baf265ef389da684513d98d68edf4eae',    # 💎 HFUN
+    '49259bc8e57d4a039fd41f9b40d1a3a6',    # 💎 AAVE0
+    'fd61ec89811ba3cf2ae12d0ed8ef1afd',    # 💎 XAUT0
+    'f448c3cad413cdf0feb1746d7b057967',    # 💎 USDXL
+    '38348c17e1a18559bbda232d22007695',    # 💎 CATBAL
+    '0dd6980f71e51e6f218a9b7d53c837f6',    # 💎 LQNA
+    'fcf28885456bf7e7cbe5b7a25407c5bc',    # 💎 JEFF
+    '7f33d750065fe8ee53ac8d8195808e4c',    # 💎 WOULD
+    '0a036982bc089f1f9da1a664a698948d',    # 💎 HWAVE
+    '7edce821fc9e272192e73420ac9ad319',    # 💎 FLASK
 ]
 
 # For ASTER/HYPERLIQUID exchanges: Use trading symbols
@@ -189,7 +218,7 @@ SYMBOLS = [
 
 # Keep only these prompts
 TRADING_PROMPT = """
-You are Moon Dev's AI Trading Assistant 🌙
+You are Zheyo's AI Trading Assistant 🌙
 
 Analyze the provided market data and strategy signals (if available) to make a trading decision.
 

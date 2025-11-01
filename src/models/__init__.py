@@ -5,7 +5,7 @@ Built with love by Moon Dev 🚀
 
 from .base_model import BaseModel, ModelResponse
 from .claude_model import ClaudeModel
-from .groq_model import GroqModel
+#from .groq_model import GroqModel
 from .openai_model import OpenAIModel
 # from .gemini_model import GeminiModel  # Temporarily disabled due to protobuf conflict
 from .deepseek_model import DeepSeekModel
@@ -15,7 +15,7 @@ __all__ = [
     'BaseModel',
     'ModelResponse',
     'ClaudeModel',
-    'GroqModel',
+    # 'GroqModel',
     'OpenAIModel',
     # 'GeminiModel',  # Temporarily disabled due to protobuf conflict
     'DeepSeekModel',
