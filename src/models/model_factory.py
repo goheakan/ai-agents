@@ -208,18 +208,18 @@ class ModelFactory:
             
         return model
     
-        def _get_api_key_mapping(self) -> Dict[str, str]:
-            """Get mapping of model types to their API key environment variable names"""
-            return {
-                #"claude": "ANTHROPIC_KEY",
-                #"groq": "GROQ_API_KEY",
-                #"openai": "OPENAI_KEY",
-                #"gemini": "GEMINI_KEY",  # Re-enabled with Gemini 2.5 models
-                #"deepseek": "DEEPSEEK_KEY",
-                "xai": "GROK_API_KEY",  # Grok/xAI uses GROK_API_KEY
-                #"openrouter": "OPENROUTER_API_KEY",  # 🌙 Moon Dev: OpenRouter - 200+ models!
-                # Ollama doesn't need an API key as it runs locally
-            }
+    def _get_api_key_mapping(self) -> Dict[str, str]:
+        """Get mapping of model types to their API key environment variable names"""
+        return {
+            "claude": "ANTHROPIC_KEY",
+            #"groq": "GROQ_API_KEY",
+            #"openai": "OPENAI_KEY",
+            #"gemini": "GEMINI_KEY",  # Re-enabled with Gemini 2.5 models
+            #"deepseek": "DEEPSEEK_KEY",
+            "xai": "GROK_API_KEY",  # Grok/xAI uses GROK_API_KEY
+            #"openrouter": "OPENROUTER_API_KEY",  # 🌙 Moon Dev: OpenRouter - 200+ models!
+            # Ollama doesn't need an API key as it runs locally
+        }
     
     @property
     def available_models(self) -> Dict[str, list]:

@@ -19,6 +19,7 @@ import time
 import sys
 from termcolor import cprint
 from dotenv import load_dotenv
+from src.agents.trading_agent import EXCHANGE
 
 # Add Aster Dex Trading Bots to path
 aster_bots_path = '/Users/md/Dropbox/dev/github/Aster-Dex-Trading-Bots'
@@ -27,8 +28,12 @@ if aster_bots_path not in sys.path:
 
 # Try importing Aster modules
 try:
-    from aster_api import AsterAPI  # type: ignore
-    from aster_funcs import AsterFuncs  # type: ignore
+    if EXCHANGE == "ASTER":
+        from aster_api import AsterAPI  # type: ignore
+        from aster_funcs import AsterFuncs  # type: ignore
+    else:
+        AsterAPI = None  # Stub for non-Aster exchanges
+        AsterFuncs = None
 except ImportError as e:
     cprint(f"❌ Failed to import Aster modules: {e}", "red")
     cprint(f"Make sure Aster-Dex-Trading-Bots exists at: {aster_bots_path}", "yellow")
@@ -37,19 +42,20 @@ except ImportError as e:
 # Load environment variables
 load_dotenv()
 
-# Get API keys
-ASTER_API_KEY = os.getenv('ASTER_API_KEY')
-ASTER_API_SECRET = os.getenv('ASTER_API_SECRET')
+if EXCHANGE == "ASTER":
+    ASTER_API_KEY = os.getenv('ASTER_API_KEY')
+    ASTER_API_SECRET = os.getenv('ASTER_API_SECRET')
+    if not ASTER_API_KEY or not ASTER_API_SECRET:
+        cprint("❌ ASTER API keys not found in .env file!", "red")
+        cprint("Please add ASTER_API_KEY and ASTER_API_SECRET to your .env file", "yellow")
+        exit(1)
+    api = AsterAPI(ASTER_API_KEY, ASTER_API_SECRET)
+    funcs = AsterFuncs(api)
+else:
+    print("⚠️ Aster test skipped for non-Aster exchange")
+    api = None
+    funcs = None
 
-# Verify API keys are loaded
-if not ASTER_API_KEY or not ASTER_API_SECRET:
-    cprint("❌ ASTER API keys not found in .env file!", "red")
-    cprint("Please add ASTER_API_KEY and ASTER_API_SECRET to your .env file", "yellow")
-    sys.exit(1)
-
-# Initialize API
-api = AsterAPI(ASTER_API_KEY, ASTER_API_SECRET)
-funcs = AsterFuncs(api)
 
 # Configuration
 SYMBOL = 'BTCUSDT'
