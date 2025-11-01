@@ -81,7 +81,7 @@ Built with love by Moon Dev 🚀
 # ============================================================================
 
 # 🏦 EXCHANGE SELECTION
-EXCHANGE = "ASTER"  # Options: "ASTER", "HYPERLIQUID", "SOLANA"
+EXCHANGE = "HYPERLIQUID"  # Options: "ASTER", "HYPERLIQUID", "SOLANA"
                      # - "ASTER" = Aster DEX futures (supports long/short)
                      # - "HYPERLIQUID" = HyperLiquid perpetuals (supports long/short)
                      # - "SOLANA" = Solana on-chain DEX (long only)
