@@ -201,8 +201,8 @@ MONITORED_TOKENS = [
 # Add symbols you want to trade (e.g., BTC, ETH, SOL, etc.)
 SYMBOLS = [
     'BTC',      # Bitcoin
-    #'ETH',     # Ethereum
-    #'SOL',     # Solana
+    'ETH',     # Ethereum
+    'SOL',     # Solana
 ]
 
 # Example: To trade multiple tokens, uncomment the ones you want:
@@ -352,7 +352,7 @@ def monitor_position_pnl(token, check_interval=PNL_CHECK_INTERVAL):
             if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
                 position = n.get_position(token)
             else:
-                position_usd = n.get_token_balance_usd(token)
+                position_usd = n.get_token_balance_usd(token, account=None)
                 if position_usd == 0:
                     cprint(f"✅ Position closed for {token}", "green")
                     return True
@@ -433,7 +433,7 @@ def get_account_balance():
             return balance
         else:
             # SOLANA - get USDC balance
-            balance = n.get_token_balance_usd(USDC_ADDRESS)
+            balance = n.get_token_balance_usd(USDC_ADDRESS, account=None)
             cprint(f"💰 SOLANA USDC Balance: ${balance:,.2f}", "cyan")
             return balance
     except Exception as e:
@@ -860,7 +860,7 @@ Example format:
                 
                 try:
                     # Get current position value
-                    current_position = n.get_token_balance_usd(token)
+                    current_position = n.get_token_balance_usd(token, account=None)
                     target_allocation = amount
                     
                     print(f"🎯 Target allocation: ${target_allocation:.2f} USD")
@@ -901,7 +901,7 @@ Example format:
             action = row['action']
 
             # Check if we have a position
-            current_position = n.get_token_balance_usd(token)
+            current_position = n.get_token_balance_usd(token, account=None)
 
             cprint(f"\n{'='*60}", "cyan")
             cprint(f"🎯 Token: {token_short}", "cyan", attrs=['bold'])
@@ -985,7 +985,7 @@ Example format:
                                     else:
                                         cprint(f"⚠️  Warning: Position verification failed - no position found!", "yellow")
                                 else:
-                                    position_usd = n.get_token_balance_usd(token)
+                                    position_usd = n.get_token_balance_usd(token, account=None)
                                     if position_usd > 0:
                                         cprint(f"📊 Confirmed: ${position_usd:,.2f} position", "green", attrs=['bold'])
                                     else:
@@ -1195,7 +1195,7 @@ def main():
                         monitored_token = token
                         break
                 else:
-                    position_usd = n.get_token_balance_usd(token)
+                    position_usd = n.get_token_balance_usd(token, account=None)
                     if position_usd > 0:
                         has_position = True
                         monitored_token = token

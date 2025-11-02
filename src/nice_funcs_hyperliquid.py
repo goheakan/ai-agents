@@ -21,13 +21,13 @@ import pandas_ta as ta
 import datetime
 from datetime import timedelta
 from termcolor import colored, cprint
-from eth_account.signers.local import LocalAccount
-import eth_account
+from eth_account import Account  # Fixed import for Account.from_key
+from dotenv import load_dotenv
+import traceback
+
 from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
 from hyperliquid.utils import constants
-from dotenv import load_dotenv
-import traceback
 
 # Load environment variables
 load_dotenv()
@@ -54,6 +54,21 @@ BASE_URL = 'https://api.hyperliquid.xyz/info'
 
 # Global variable to store timestamp offset
 timestamp_offset = None
+
+def _get_account_from_env():
+    """Get HyperLiquid account from environment variables"""
+    try:
+        private_key = os.getenv('HYPER_LIQUID_KEY')
+        if not private_key:
+            cprint("❌ HYPER_LIQUID_KEY not found in .env file!", "red")
+            return None
+        account = Account.from_key(private_key)  # Fixed: Use Account.from_key
+        cprint(f"✅ HyperLiquid account loaded: {account.address[:8]}...", "green")
+        return account
+    except Exception as e:
+        cprint(f"❌ Error creating HyperLiquid account: {e}", "red")
+        traceback.print_exc()
+        return None
 
 def adjust_timestamp(dt):
     """Adjust API timestamps by subtracting the timestamp offset."""
@@ -114,56 +129,89 @@ def get_sz_px_decimals(symbol):
     print(f'{symbol} price: {ask} | sz decimals: {sz_decimals} | px decimals: {px_decimals}')
     return sz_decimals, px_decimals
 
-def get_position(symbol, account):
+def get_position(symbol, account=None):
     """Get current position for a symbol"""
     print(f'{colored("Getting position for", "cyan")} {colored(symbol, "yellow")}')
 
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
-    user_state = info.user_state(account.address)
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return [], False, 0, symbol, 0, 0, True
 
-    positions = []
-    for position in user_state["assetPositions"]:
-        if position["position"]["coin"] == symbol and float(position["position"]["szi"]) != 0:
-            positions.append(position["position"])
-            coin = position["position"]["coin"]
-            pos_size = float(position["position"]["szi"])
-            entry_px = float(position["position"]["entryPx"])
-            pnl_perc = float(position["position"]["returnOnEquity"]) * 100
-            print(f'{colored(f"{coin} position:", "green")} Size: {pos_size} | Entry: ${entry_px} | PnL: {pnl_perc:.2f}%')
+    try:
+        info = Info(constants.MAINNET_API_URL, skip_ws=True)
+        user_state = info.user_state(account.address)
 
-    im_in_pos = len(positions) > 0
+        if user_state is None:
+            cprint("⚠️ No user state returned - check API key", "yellow")
+            return [], False, 0, symbol, 0, 0, True
 
-    if not im_in_pos:
-        print(f'{colored("No position in", "yellow")} {symbol}')
-        return positions, im_in_pos, 0, symbol, 0, 0, True
+        positions = []
+        for position in user_state["assetPositions"]:
+            if position["position"]["coin"] == symbol and float(position["position"]["szi"]) != 0:
+                positions.append(position["position"])
+                coin = position["position"]["coin"]
+                pos_size = float(position["position"]["szi"])
+                entry_px = float(position["position"]["entryPx"])
+                pnl_perc = float(position["position"]["returnOnEquity"]) * 100
+                print(f'{colored(f"{coin} position:", "green")} Size: {pos_size} | Entry: ${entry_px} | PnL: {pnl_perc:.2f}%')
 
-    # Return position details
-    pos_size = positions[0]["szi"]
-    pos_sym = positions[0]["coin"]
-    entry_px = float(positions[0]["entryPx"])
-    pnl_perc = float(positions[0]["returnOnEquity"]) * 100
-    is_long = float(pos_size) > 0
+        im_in_pos = len(positions) > 0
 
-    if is_long:
-        print(f'{colored("LONG", "green")} position')
-    else:
-        print(f'{colored("SHORT", "red")} position')
+        if not im_in_pos:
+            print(f'{colored("No position in", "yellow")} {symbol}')
+            return positions, im_in_pos, 0, symbol, 0, 0, True
 
-    return positions, im_in_pos, pos_size, pos_sym, entry_px, pnl_perc, is_long
+        # Return position details
+        pos_size = positions[0]["szi"]
+        pos_sym = positions[0]["coin"]
+        entry_px = float(positions[0]["entryPx"])
+        pnl_perc = float(positions[0]["returnOnEquity"]) * 100
+        is_long = float(pos_size) > 0
+
+        if is_long:
+            print(f'{colored("LONG", "green")} position')
+        else:
+            print(f'{colored("SHORT", "red")} position')
+
+        return positions, im_in_pos, pos_size, pos_sym, entry_px, pnl_perc, is_long
+
+    except Exception as e:
+        cprint(f"❌ Error getting position for {symbol}: {e}", "red")
+        traceback.print_exc()
+        return [], False, 0, symbol, 0, 0, True
 
 def set_leverage(symbol, leverage, account):
     """Set leverage for a symbol"""
     print(f'Setting leverage for {symbol} to {leverage}x')
-    exchange = Exchange(account, constants.MAINNET_API_URL)
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
 
-    # Update leverage (is_cross=True for cross margin)
-    result = exchange.update_leverage(leverage, symbol, is_cross=True)
-    print(f'✅ Leverage set to {leverage}x for {symbol}')
-    return result
+    try:
+        exchange = Exchange(account, constants.MAINNET_API_URL)
+
+        # Set the leverage (is_cross=True for cross margin)
+        result = exchange.update_leverage(leverage, symbol, is_cross=True)
+        cprint(f'✅ Leverage set to {leverage}x for {symbol}', 'green')
+        return result
+    except Exception as e:
+        cprint(f'❌ Error setting leverage for {symbol}: {e}', 'red')
+        traceback.print_exc()
+        return None
 
 def adjust_leverage_usd_size(symbol, usd_size, leverage, account):
     """Adjust leverage and calculate position size"""
     print(f'Adjusting leverage for {symbol} to {leverage}x with ${usd_size} size')
+
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None, None
 
     # Set the leverage
     set_leverage(symbol, leverage, account)
@@ -186,99 +234,138 @@ def adjust_leverage_usd_size(symbol, usd_size, leverage, account):
 def cancel_all_orders(account):
     """Cancel all open orders"""
     print(colored('🚫 Cancelling all orders', 'yellow'))
-    exchange = Exchange(account, constants.MAINNET_API_URL)
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return
 
-    # Get all open orders
-    open_orders = info.open_orders(account.address)
+    try:
+        exchange = Exchange(account, constants.MAINNET_API_URL)
+        info = Info(constants.MAINNET_API_URL, skip_ws=True)
 
-    if not open_orders:
-        print(colored('   No open orders to cancel', 'yellow'))
+        # Get all open orders
+        open_orders = info.open_orders(account.address)
+
+        if not open_orders:
+            cprint('   No open orders to cancel', 'yellow')
+            return
+
+        # Cancel each order
+        for order in open_orders:
+            try:
+                exchange.cancel(order['coin'], order['oid'])
+                cprint(f'   ✅ Cancelled {order["coin"]} order', 'green')
+            except Exception as e:
+                cprint(f'   ⚠️ Could not cancel {order["coin"]} order: {str(e)}', 'yellow')
+
+        cprint('✅ All orders cancelled', 'green')
         return
-
-    # Cancel each order
-    for order in open_orders:
-        try:
-            exchange.cancel(order['coin'], order['oid'])
-            print(colored(f'   ✅ Cancelled {order["coin"]} order', 'green'))
-        except Exception as e:
-            print(colored(f'   ⚠️ Could not cancel {order["coin"]} order: {str(e)}', 'yellow'))
-
-    print(colored('✅ All orders cancelled', 'green'))
-    return
+    except Exception as e:
+        cprint(f'❌ Error cancelling orders: {e}', 'red')
+        traceback.print_exc()
+        return
 
 def limit_order(coin, is_buy, sz, limit_px, reduce_only, account):
     """Place a limit order"""
-    exchange = Exchange(account, constants.MAINNET_API_URL)
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
 
-    rounding = get_sz_px_decimals(coin)[0]
-    sz = round(sz, rounding)
+    try:
+        exchange = Exchange(account, constants.MAINNET_API_URL)
 
-    print(f"🌙 Moon Dev placing order:")
-    print(f"Symbol: {coin}")
-    print(f"Side: {'BUY' if is_buy else 'SELL'}")
-    print(f"Size: {sz}")
-    print(f"Price: ${limit_px}")
-    print(f"Reduce Only: {reduce_only}")
+        rounding = get_sz_px_decimals(coin)[0]
+        sz = round(sz, rounding)
 
-    order_result = exchange.order(coin, is_buy, sz, limit_px, {"limit": {"tif": "Gtc"}}, reduce_only=reduce_only)
+        print(f"🌙 Moon Dev placing order:")
+        print(f"Symbol: {coin}")
+        print(f"Side: {'BUY' if is_buy else 'SELL'}")
+        print(f"Size: {sz}")
+        print(f"Price: ${limit_px}")
+        print(f"Reduce Only: {reduce_only}")
 
-    if isinstance(order_result, dict) and 'response' in order_result:
-        print(f"✅ Order placed with status: {order_result['response']['data']['statuses'][0]}")
-    else:
-        print(f"✅ Order placed")
+        order_result = exchange.order(coin, is_buy, sz, limit_px, {"limit": {"tif": "Gtc"}}, reduce_only=reduce_only)
 
-    return order_result
+        if isinstance(order_result, dict) and 'response' in order_result:
+            cprint(f"✅ Order placed with status: {order_result['response']['data']['statuses'][0]}", 'green')
+        else:
+            cprint("✅ Order placed", 'green')
+
+        return order_result
+    except Exception as e:
+        cprint(f'❌ Error placing limit order: {e}', 'red')
+        traceback.print_exc()
+        return None
 
 def kill_switch(symbol, account):
     """Close position at market price"""
     print(colored(f'🔪 KILL SWITCH ACTIVATED for {symbol}', 'red', attrs=['bold']))
 
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
-    exchange = Exchange(account, constants.MAINNET_API_URL)
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
 
-    # Get current position
-    positions, im_in_pos, pos_size, _, _, _, is_long = get_position(symbol, account)
+    try:
+        info = Info(constants.MAINNET_API_URL, skip_ws=True)
+        exchange = Exchange(account, constants.MAINNET_API_URL)
 
-    if not im_in_pos:
-        print(colored('No position to close', 'yellow'))
-        return
+        # Get current position
+        positions, im_in_pos, pos_size, _, _, _, is_long = get_position(symbol, account)
 
-    # Place market order to close
-    side = not is_long  # Opposite side to close
-    abs_size = abs(float(pos_size))
+        if not im_in_pos:
+            cprint('No position to close', 'yellow')
+            return None
 
-    print(f'Closing {"LONG" if is_long else "SHORT"} position: {abs_size} {symbol}')
+        # Place market order to close
+        side = not is_long  # Opposite side to close
+        abs_size = abs(float(pos_size))
 
-    # Get current price for market order
-    ask, bid, _ = ask_bid(symbol)
+        print(f'Closing {"LONG" if is_long else "SHORT"} position: {abs_size} {symbol}')
 
-    # For closing positions with IOC orders:
-    # - Closing long: Sell below bid (undersell)
-    # - Closing short: Buy above ask (overbid)
-    if is_long:
-        close_price = bid * 0.999  # Undersell to close long
-    else:
-        close_price = ask * 1.001  # Overbid to close short
+        # Get current price for market order
+        ask, bid, _ = ask_bid(symbol)
 
-    # Round to appropriate decimals for BTC
-    if symbol == 'BTC':
-        close_price = round(close_price)
-    else:
-        close_price = round(close_price, 1)
+        # For closing positions with IOC orders:
+        # - Closing long: Sell below bid (undersell)
+        # - Closing short: Buy above ask (overbid)
+        if is_long:
+            close_price = bid * 0.999  # Undersell to close long
+        else:
+            close_price = ask * 1.001  # Overbid to close short
 
-    print(f'   Placing IOC at ${close_price} to close position')
+        # Round to appropriate decimals for BTC
+        if symbol == 'BTC':
+            close_price = round(close_price)
+        else:
+            close_price = round(close_price, 1)
 
-    # Place reduce-only order to close
-    order_result = exchange.order(symbol, side, abs_size, close_price, {"limit": {"tif": "Ioc"}}, reduce_only=True)
+        print(f'   Placing IOC at ${close_price} to close position')
 
-    print(colored('✅ Kill switch executed - position closed', 'green'))
-    return order_result
+        # Place reduce-only order to close
+        order_result = exchange.order(symbol, side, abs_size, close_price, {"limit": {"tif": "Ioc"}}, reduce_only=True)
+
+        cprint('✅ Kill switch executed - position closed', 'green')
+        return order_result
+    except Exception as e:
+        cprint(f'❌ Error in kill switch: {e}', 'red')
+        traceback.print_exc()
+        return None
 
 def pnl_close(symbol, target, max_loss, account):
     """Close position if PnL target or stop loss is hit"""
     print(f'{colored("Checking PnL conditions", "cyan")}')
     print(f'Target: {target}% | Stop loss: {max_loss}%')
+
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return False
 
     # Get current position info
     positions, im_in_pos, pos_size, pos_sym, entry_px, pnl_perc, is_long = get_position(symbol, account)
@@ -304,258 +391,180 @@ def pnl_close(symbol, target, max_loss, account):
 
 def get_current_price(symbol):
     """Get current price for a symbol"""
-    ask, bid, _ = ask_bid(symbol)
-    mid_price = (ask + bid) / 2
-    return mid_price
+    try:
+        ask, bid, _ = ask_bid(symbol)
+        mid_price = (ask + bid) / 2
+        return mid_price
+    except Exception as e:
+        cprint(f'❌ Error getting current price for {symbol}: {e}', 'red')
+        return None
 
 def get_account_value(account):
     """Get total account value"""
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
-    user_state = info.user_state(account.address)
-    account_value = float(user_state["marginSummary"]["accountValue"])
-    print(f'Account value: ${account_value:,.2f}')
-    return account_value
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return 0
+
+    try:
+        info = Info(constants.MAINNET_API_URL, skip_ws=True)
+        user_state = info.user_state(account.address)
+
+        if user_state is None:
+            cprint("⚠️ No user state returned - check API key", "yellow")
+            return 0
+
+        account_value = float(user_state["marginSummary"]["accountValue"])
+        print(f'Account value: ${account_value:,.2f}')
+        return account_value
+    except Exception as e:
+        cprint(f'❌ Error getting account value: {e}', 'red')
+        return 0
 
 def market_buy(symbol, usd_size, account):
     """Market buy using HyperLiquid"""
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
+
     print(colored(f'🛒 Market BUY {symbol} for ${usd_size}', 'green'))
 
-    # Get current ask price
-    ask, bid, _ = ask_bid(symbol)
+    try:
+        # Get current ask price
+        ask, bid, _ = ask_bid(symbol)
 
-    # Overbid by 0.1% to ensure fill (market buy needs to be above ask)
-    buy_price = ask * 1.001
+        # Overbid by 0.1% to ensure fill (market buy needs to be above ask)
+        buy_price = ask * 1.001
 
-    # Round to appropriate decimals for BTC (whole numbers)
-    if symbol == 'BTC':
-        buy_price = round(buy_price)
-    else:
-        buy_price = round(buy_price, 1)
+        # Round to appropriate decimals for BTC (whole numbers)
+        if symbol == 'BTC':
+            buy_price = round(buy_price)
+        else:
+            buy_price = round(buy_price, 1)
 
-    # Calculate position size
-    pos_size = usd_size / buy_price
+        # Calculate position size
+        pos_size = usd_size / buy_price
 
-    # Get decimals and round
-    sz_decimals, _ = get_sz_px_decimals(symbol)
-    pos_size = round(pos_size, sz_decimals)
-
-    # Ensure minimum order value
-    order_value = pos_size * buy_price
-    if order_value < 10:
-        print(f'   ⚠️ Order value ${order_value:.2f} below $10 minimum, adjusting...')
-        pos_size = 11 / buy_price  # $11 to have buffer
+        # Get decimals and round
+        sz_decimals, _ = get_sz_px_decimals(symbol)
         pos_size = round(pos_size, sz_decimals)
 
-    print(f'   Placing IOC buy at ${buy_price} (0.1% above ask ${ask})')
-    print(f'   Position size: {pos_size} {symbol} (value: ${pos_size * buy_price:.2f})')
+        # Ensure minimum order value
+        order_value = pos_size * buy_price
+        if order_value < 10:
+            print(f'   ⚠️ Order value ${order_value:.2f} below $10 minimum, adjusting...')
+            pos_size = 11 / buy_price  # $11 to have buffer
+            pos_size = round(pos_size, sz_decimals)
 
-    # Place IOC order above ask to ensure fill
-    exchange = Exchange(account, constants.MAINNET_API_URL)
-    order_result = exchange.order(symbol, True, pos_size, buy_price, {"limit": {"tif": "Ioc"}}, reduce_only=False)
+        print(f'   Placing IOC buy at ${buy_price} (0.1% above ask ${ask})')
+        print(f'   Position size: {pos_size} {symbol} (value: ${pos_size * buy_price:.2f})')
 
-    print(colored(f'✅ Market buy executed: {pos_size} {symbol} at ${buy_price}', 'green'))
-    return order_result
+        # Place IOC order above ask to ensure fill
+        exchange = Exchange(account, constants.MAINNET_API_URL)
+        order_result = exchange.order(symbol, True, pos_size, buy_price, {"limit": {"tif": "Ioc"}}, reduce_only=False)
+
+        cprint(f'✅ Market buy executed: {pos_size} {symbol} at ${buy_price}', 'green')
+        return order_result
+    except Exception as e:
+        cprint(f'❌ Error in market buy: {e}', 'red')
+        traceback.print_exc()
+        return None
 
 def market_sell(symbol, usd_size, account):
     """Market sell using HyperLiquid"""
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
+
     print(colored(f'💸 Market SELL {symbol} for ${usd_size}', 'red'))
 
-    # Get current bid price
-    ask, bid, _ = ask_bid(symbol)
+    try:
+        # Get current bid price
+        ask, bid, _ = ask_bid(symbol)
 
-    # Undersell by 0.1% to ensure fill (market sell needs to be below bid)
-    sell_price = bid * 0.999
+        # Undersell by 0.1% to ensure fill (market sell needs to be below bid)
+        sell_price = bid * 0.999
 
-    # Round to appropriate decimals for BTC (whole numbers)
-    if symbol == 'BTC':
-        sell_price = round(sell_price)
-    else:
-        sell_price = round(sell_price, 1)
+        # Round to appropriate decimals for BTC (whole numbers)
+        if symbol == 'BTC':
+            sell_price = round(sell_price)
+        else:
+            sell_price = round(sell_price, 1)
 
-    # Calculate position size
-    pos_size = usd_size / sell_price
+        # Calculate position size
+        pos_size = usd_size / sell_price
 
-    # Get decimals and round
-    sz_decimals, _ = get_sz_px_decimals(symbol)
-    pos_size = round(pos_size, sz_decimals)
-
-    # Ensure minimum order value
-    order_value = pos_size * sell_price
-    if order_value < 10:
-        print(f'   ⚠️ Order value ${order_value:.2f} below $10 minimum, adjusting...')
-        pos_size = 11 / sell_price  # $11 to have buffer
+        # Get decimals and round
+        sz_decimals, _ = get_sz_px_decimals(symbol)
         pos_size = round(pos_size, sz_decimals)
 
-    print(f'   Placing IOC sell at ${sell_price} (0.1% below bid ${bid})')
-    print(f'   Position size: {pos_size} {symbol} (value: ${pos_size * sell_price:.2f})')
+        print(f'   Placing IOC sell at ${sell_price} (0.1% below bid ${bid})')
+        print(f'   Position size: {pos_size} {symbol} (value: ${pos_size * sell_price:.2f})')
 
-    # Place IOC order below bid to ensure fill
-    exchange = Exchange(account, constants.MAINNET_API_URL)
-    order_result = exchange.order(symbol, False, pos_size, sell_price, {"limit": {"tif": "Ioc"}}, reduce_only=False)
+        # Place IOC order below bid to ensure fill
+        exchange = Exchange(account, constants.MAINNET_API_URL)
+        order_result = exchange.order(symbol, False, pos_size, sell_price, {"limit": {"tif": "Ioc"}}, reduce_only=False)
 
-    print(colored(f'✅ Market sell executed: {pos_size} {symbol} at ${sell_price}', 'red'))
-    return order_result
-
-def close_position(symbol, account):
-    """Close any open position for a symbol"""
-    positions, im_in_pos, pos_size, _, _, pnl_perc, is_long = get_position(symbol, account)
-
-    if not im_in_pos:
-        print(f'No position to close for {symbol}')
+        cprint(f'✅ Market sell executed: {pos_size} {symbol} at ${sell_price}', 'green')
+        return order_result
+    except Exception as e:
+        cprint(f'❌ Error in market sell: {e}', 'red')
+        traceback.print_exc()
         return None
 
-    print(f'Closing {"LONG" if is_long else "SHORT"} position with PnL: {pnl_perc:.2f}%')
-    return kill_switch(symbol, account)
+def _get_ohlcv(symbol, timeframe, start_time, end_time, batch_size=5000):
+    """Private method to get OHLCV data from HyperLiquid API"""
+    try:
+        print(f"\n🔍 Requesting data for {symbol}:")
+        print(f"📊 Batch Size: {batch_size}")
+        print(f"⏰ Interval: {timeframe}")
+        print(f"🚀 Start: {start_time} UTC")
+        print(f"🎯 End: {end_time} UTC")
 
-# Additional helper functions for agents
-def get_balance(account):
-    """Get USDC balance"""
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
-    user_state = info.user_state(account.address)
+        # Convert to timestamps
+        start_timestamp = int(start_time.timestamp() * 1000)
+        end_timestamp = int(end_time.timestamp() * 1000)
 
-    # Get withdrawable balance (free balance)
-    balance = float(user_state["withdrawable"])
-    print(f'Available balance: ${balance:,.2f}')
-    return balance
-
-def get_all_positions(account):
-    """Get all open positions"""
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
-    user_state = info.user_state(account.address)
-
-    positions = []
-    for position in user_state["assetPositions"]:
-        if float(position["position"]["szi"]) != 0:
-            positions.append({
-                'symbol': position["position"]["coin"],
-                'size': float(position["position"]["szi"]),
-                'entry_price': float(position["position"]["entryPx"]),
-                'pnl_percent': float(position["position"]["returnOnEquity"]) * 100,
-                'is_long': float(position["position"]["szi"]) > 0
-            })
-
-    return positions
-
-# ============================================================================
-# ADDITIONAL HELPER FUNCTIONS (from nice_funcs_hl.py)
-# ============================================================================
-
-def _get_exchange():
-    """Get exchange instance"""
-    private_key = os.getenv('HYPER_LIQUID_ETH_PRIVATE_KEY')
-    if not private_key:
-        raise ValueError("HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env file")
-    account = eth_account.Account.from_key(private_key)
-    return Exchange(account, constants.MAINNET_API_URL)
-
-def _get_info():
-    """Get info instance"""
-    return Info(constants.MAINNET_API_URL, skip_ws=True)
-
-def _get_account_from_env():
-    """Initialize and return HyperLiquid account from env"""
-    private_key = os.getenv('HYPER_LIQUID_ETH_PRIVATE_KEY')
-    if not private_key:
-        raise ValueError("HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env file")
-    return eth_account.Account.from_key(private_key)
-
-# ============================================================================
-# OHLCV DATA FUNCTIONS
-# ============================================================================
-
-def _get_ohlcv(symbol, interval, start_time, end_time, batch_size=BATCH_SIZE):
-    """Internal function to fetch OHLCV data from Hyperliquid"""
-    global timestamp_offset
-    print(f'\n🔍 Requesting data for {symbol}:')
-    print(f'📊 Batch Size: {batch_size}')
-    print(f'⏰ Interval: {interval}')
-    print(f'🚀 Start: {start_time.strftime("%Y-%m-%d %H:%M:%S")} UTC')
-    print(f'🎯 End: {end_time.strftime("%Y-%m-%d %H:%M:%S")} UTC')
-
-    start_ts = int(start_time.timestamp() * 1000)
-    end_ts = int(end_time.timestamp() * 1000)
-
-    # Build request payload
-    request_payload = {
-        "type": "candleSnapshot",
-        "req": {
-            "coin": symbol,
-            "interval": interval,
-            "startTime": start_ts,
-            "endTime": end_ts,
-            "limit": batch_size
+        print(f"📤 API Request Payload:")
+        print(f"   URL: {BASE_URL}")
+        payload = {
+            'type': 'candleSnapshot',
+            'req': {
+                'coin': symbol,
+                'interval': timeframe,
+                'startTime': start_timestamp,
+                'endTime': end_timestamp,
+                'limit': batch_size
+            }
         }
-    }
+        print(f"   Payload: {payload}")
 
-    print(f'\n📤 API Request Payload:')
-    print(f'   URL: {BASE_URL}')
-    print(f'   Payload: {request_payload}')
+        response = requests.post(BASE_URL, json=payload)
 
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = requests.post(
-                BASE_URL,
-                headers={'Content-Type': 'application/json'},
-                json=request_payload,
-                timeout=10
-            )
+        print(f"📥 API Response:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Response Text: {response.text[:500]}...")  # Truncate for readability
 
-            print(f'\n📥 API Response:')
-            print(f'   Status Code: {response.status_code}')
-            print(f'   Response Text: {response.text[:500]}...' if len(response.text) > 500 else f'   Response Text: {response.text}')
-
-            if response.status_code == 200:
-                snapshot_data = response.json()
-                if snapshot_data:
-                    # Handle timestamp offset
-                    if timestamp_offset is None:
-                        latest_api_timestamp = datetime.datetime.utcfromtimestamp(snapshot_data[-1]['t'] / 1000)
-                        system_current_date = datetime.datetime.utcnow()
-                        expected_latest_timestamp = system_current_date
-                        timestamp_offset = latest_api_timestamp - expected_latest_timestamp
-                        print(f"⏱️ Calculated timestamp offset: {timestamp_offset}")
-
-                    # Adjust timestamps
-                    for candle in snapshot_data:
-                        dt = datetime.datetime.utcfromtimestamp(candle['t'] / 1000)
-                        adjusted_dt = adjust_timestamp(dt)
-                        candle['t'] = int(adjusted_dt.timestamp() * 1000)
-
-                    first_time = datetime.datetime.utcfromtimestamp(snapshot_data[0]['t'] / 1000)
-                    last_time = datetime.datetime.utcfromtimestamp(snapshot_data[-1]['t'] / 1000)
-                    print(f'✨ Received {len(snapshot_data)} candles')
-                    print(f'📈 First: {first_time}')
-                    print(f'📉 Last: {last_time}')
-                    return snapshot_data
-                print('❌ No data returned by API')
-                return None
-
-            print(f'\n⚠️ HTTP Error {response.status_code}')
-            print(f'❌ Error details: {response.text}')
-
-            # Try to parse error as JSON for better readability
-            try:
-                error_json = response.json()
-                print(f'📋 Parsed error: {error_json}')
-            except:
-                pass
-
-        except requests.exceptions.RequestException as e:
-            print(f'\n⚠️ Request failed (attempt {attempt + 1}): {e}')
-            import traceback
-            traceback.print_exc()
-            time.sleep(1)
-        except Exception as e:
-            print(f'\n❌ Unexpected error (attempt {attempt + 1}): {e}')
-            import traceback
-            traceback.print_exc()
-            time.sleep(1)
-
-    print('\n❌ All retry attempts failed')
-    return None
+        if response.status_code == 200:
+            snapshot_data = response.json()
+            print(f"✨ Received {len(snapshot_data)} candles")
+            return snapshot_data
+        else:
+            print(f"❌ Bad status code: {response.status_code}")
+            print(f"📄 Response text: {response.text}")
+            return []
+    except Exception as e:
+        print(f"❌ Error fetching OHLCV data: {str(e)}")
+        traceback.print_exc()
+        return []
 
 def _process_data_to_df(snapshot_data):
-    """Convert raw API data to DataFrame"""
+    """Convert HyperLiquid API data to DataFrame"""
     if snapshot_data:
         columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
         data = []
@@ -711,9 +720,9 @@ def test_market_info():
             print("\n💰 Current Market Prices:")
             print("=" * 50)
             # Target symbols we're interested in
-            target_symbols = ["BTC", "ETH", "SOL", "ARB", "OP", "MATIC"]
+            test_symbols = ["BTC", "ETH", "SOL", "ARB", "OP", "MATIC"]
 
-            for symbol in target_symbols:
+            for symbol in test_symbols:
                 if symbol in info:
                     try:
                         price = float(info[symbol])
@@ -819,7 +828,7 @@ def test_funding_rates():
 # ADDITIONAL TRADING FUNCTIONS
 # ============================================================================
 
-def get_token_balance_usd(token_mint_address, account):
+def get_token_balance_usd(token_mint_address, account=None):
     """Get USD value of current position
 
     Args:
@@ -829,6 +838,12 @@ def get_token_balance_usd(token_mint_address, account):
     Returns:
         float: USD value of position (absolute value)
     """
+    if account is None:
+        account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return 0
+
     try:
         positions, im_in_pos, pos_size, _, _, _, _ = get_position(token_mint_address, account)
         if not im_in_pos:
@@ -836,9 +851,13 @@ def get_token_balance_usd(token_mint_address, account):
 
         # Get current price
         mid_price = get_current_price(token_mint_address)
+        if mid_price is None:
+            cprint(f"❌ No price available for {token_mint_address}", "red")
+            return 0
         return abs(float(pos_size) * mid_price)
     except Exception as e:
         cprint(f"❌ Error getting balance for {token_mint_address}: {e}", "red")
+        traceback.print_exc()
         return 0
 
 def ai_entry(symbol, amount, max_chunk_size=None, leverage=DEFAULT_LEVERAGE, account=None):
@@ -856,6 +875,9 @@ def ai_entry(symbol, amount, max_chunk_size=None, leverage=DEFAULT_LEVERAGE, acc
     """
     if account is None:
         account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return False
 
     # Set leverage
     set_leverage(symbol, leverage, account)
@@ -878,6 +900,9 @@ def open_short(token, amount, slippage=None, leverage=DEFAULT_LEVERAGE, account=
     """
     if account is None:
         account = _get_account_from_env()
+        if account is None:
+            cprint("❌ No HyperLiquid account available", "red")
+            return None
 
     try:
         # Set leverage

@@ -4,7 +4,7 @@ Built with love by Moon Dev 🚀
 """
 
 # 🔄 Exchange Selection
-EXCHANGE = 'solana'  # Options: 'solana', 'hyperliquid'
+EXCHANGE = 'hyperliquid'  # Options: 'solana', 'hyperliquid'
 
 # 💰 Trading Configuration
 USDC_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # Never trade or close
@@ -25,7 +25,7 @@ MONITORED_TOKENS = [
 tokens_to_trade = MONITORED_TOKENS  # Using the same list for trading
 
 # ⚡ HyperLiquid Configuration
-HYPERLIQUID_SYMBOLS = ['BTC', 'ETH', 'SOL']  # Symbols to trade on HyperLiquid perps
+HYPERLIQUID_SYMBOLS = ['BTC', 'ETH', 'SOL', 'ADA']  # Symbols to trade on HyperLiquid perps
 HYPERLIQUID_LEVERAGE = 5  # Default leverage for HyperLiquid trades (1-50)
 
 # 🔄 Exchange-Specific Token Lists
@@ -47,7 +47,7 @@ TOKEN_EXCHANGE_MAP = {
 
 # Token and wallet settings
 symbol = '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump'
-address = '4wgfCBf2WwLSRKLef9iW7JXZ2AfkxUxGM4XcKpHm3Sin' # YOUR WALLET ADDRESS HERE
+address = '0x987BDD002F21FD3f6f34D7fCDd803eE4fbA2BFb4' # YOUR WALLET ADDRESS HERE
 
 # Position sizing 🎯
 usd_size = 25  # Size of position to hold
