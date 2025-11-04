@@ -195,6 +195,7 @@ PROCESSED_IDEAS_LOG = DATA_DIR / "processed_ideas.log"
 STATS_CSV = DATA_DIR / "backtest_stats.csv"  # Moon Dev's stats tracker!
 IDEAS_FILE = DATA_DIR / "ideas.txt"
 
+
 def update_date_folders():
     """
     🌙 Moon Dev's Date Folder Updater!
@@ -1058,6 +1059,17 @@ def clean_model_output(output, content_type="text"):
 # ============================================
 # 🤖 AI AGENT FUNCTIONS (Thread-safe versions)
 # ============================================
+
+
+# Strategy: RSI Momentum + AI Confirmation
+def rsi_momentum_strategy(df):
+    df['rsi'] = ta.rsi(df['close'], length=14)
+    df['signal'] = 0
+    df.loc[df['rsi'] < 30, 'signal'] = 1  # Buy signal
+    df.loc[df['rsi'] > 70, 'signal'] = -1  # Sell signal
+    # Backtest with Backtesting.py
+    # ... (use your existing backtest code)
+    return df
 
 def research_strategy(content, thread_id):
     """Research AI: Analyzes and creates trading strategy"""
