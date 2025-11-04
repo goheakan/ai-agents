@@ -100,7 +100,7 @@ RATE_LIMIT_GLOBAL_DELAY = 0.5  # Global delay between any API calls
 #   - Perfect for auto-generated strategies from web search agent!
 #
 STRATEGIES_FROM_FILES = True  # Set to True to read from folder instead of ideas.txt
-STRATEGIES_FOLDER = "/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/web_search_research/final_strategies"
+STRATEGIES_FOLDER = "src/data/rbi_pp_multi/web_search_research/final_strategies"
 
 # Thread color mapping
 THREAD_COLORS = {
@@ -132,34 +132,30 @@ rate_limiter = Semaphore(MAX_PARALLEL_THREADS)
 # - GLM: z-ai/glm-4.6
 # See src/models/openrouter_model.py for ALL available models!
 
-# 🧠 RESEARCH: Grok 4 Fast Reasoning (xAI's blazing fast model!)
+# 🌙 Moon Dev: Use Ollama (local, free) instead of xai
 RESEARCH_CONFIG = {
-    "type": "xai",
-    "name": "grok-4-fast-reasoning"
+    "type": "ollama",
+    "name": "0xroyce/plutus"  # One of your available models
 }
 
-# 💻 BACKTEST CODE GEN: Grok 4 Fast Reasoning (xAI's blazing fast model!)
 BACKTEST_CONFIG = {
-    "type": "xai",
-    "name": "grok-4-fast-reasoning"
+    "type": "ollama",
+    "name": "0xroyce/plutus"
 }
 
-# 🐛 DEBUGGING: Grok 4 Fast Reasoning (xAI's blazing fast model!)
 DEBUG_CONFIG = {
-    "type": "xai",
-    "name": "grok-4-fast-reasoning"
+    "type": "ollama",
+    "name": "0xroyce/plutus"
 }
 
-# 📦 PACKAGE CHECK: Grok 4 Fast Reasoning (xAI's blazing fast model!)
 PACKAGE_CONFIG = {
-    "type": "xai",
-    "name": "grok-4-fast-reasoning"
+    "type": "ollama",
+    "name": "0xroyce/plutus"
 }
 
-# 🚀 OPTIMIZATION: Grok 4 Fast Reasoning (xAI's blazing fast model!)
 OPTIMIZE_CONFIG = {
-    "type": "xai",
-    "name": "grok-4-fast-reasoning"
+    "type": "ollama",
+    "name": "deepseek-r1"
 }
 
 # 🎯 PROFIT TARGET CONFIGURATION
